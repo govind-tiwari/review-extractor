@@ -1,0 +1,121 @@
+package com.example.review_extractor.service;
+
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
+
+@Service
+public class LLMService {
+
+    @Value("${huggingface.api.key}")
+    private String huggingFaceApiKey;
+
+    // Choose a suitable model. Replace 'gpt2' with your chosen model if different.
+    private static final String HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/gpt2";
+
+    /**
+     * Sends a prompt to the Hugging Face Inference API and retrieves the generated CSS selector.
+     *
+     * @param url        The URL of the product page.
+     * @param pageSource The HTML content of the product page.
+     * @return The CSS selector for review elements.
+     * @throws UnirestException If an error occurs during the HTTP request.
+     * @throws JsonProcessingException 
+     * @throws JsonMappingException 
+     */
+    public String getReviewCssSelector(String url, String pageSource) throws UnirestException, JsonMappingException, JsonProcessingException {
+        String prompt = String.format(
+                "Analyze the following HTML content of a product page: [URL: %s]. Identify the CSS selector that can be used to select all review elements on this page.\n\nHTML Content:\n%s\n\nProvide only the CSS selector without any additional explanation.",
+                url, pageSource
+        );
+
+        String requestBody = "{\n" +
+                "  \"inputs\": \"" + escapeJson(prompt) + "\",\n" +
+                "  \"options\": {\"use_cache\": false}\n" +
+                "}";
+
+        HttpResponse<String> response = Unirest.post(HUGGINGFACE_API_URL)
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + huggingFaceApiKey)
+                .body(requestBody)
+                .asString();
+
+        if (response.getStatus() == 200) {
+            // Parse the response to extract the CSS selector
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(response.getBody());
+            if (root.isArray() && root.size() > 0) {
+                String generatedText = root.get(0).get("generated_text").asText();
+                // Extract the CSS selector from the generated text
+                return generatedText.trim();
+            }
+        } else {
+            // Handle error responses
+            throw new RuntimeException("Failed to get response from Hugging Face API: " + response.getStatus() + " - " + response.getBody());
+        }
+
+        return null;
+    }
+
+    /**
+     * Sends a prompt to the Hugging Face Inference API and retrieves the CSS selector for the "Next" page button.
+     *
+     * @param url        The URL of the product page.
+     * @param pageSource The HTML content of the product page.
+     * @return The CSS selector for the "Next" page button.
+     * @throws UnirestException If an error occurs during the HTTP request.
+     * @throws JsonMappingException 
+     */
+    public String getNextPageCssSelector(String url, String pageSource) throws UnirestException, JsonMappingException, JsonProcessingException,JsonMappingException {
+        String prompt = String.format(
+                "Analyze the following HTML content of a product page: [URL: %s]. Identify the CSS selector for the 'Next' button or link that navigates to the next page of reviews.\n\nHTML Content:\n%s\n\nProvide only the CSS selector without any additional explanation.",
+                url, pageSource
+        );
+
+        String requestBody = "{\n" +
+                "  \"inputs\": \"" + escapeJson(prompt) + "\",\n" +
+                "  \"options\": {\"use_cache\": false}\n" +
+                "}";
+
+        HttpResponse<String> response = Unirest.post(HUGGINGFACE_API_URL)
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + huggingFaceApiKey)
+                .body(requestBody)
+                .asString();
+
+        if (response.getStatus() == 200) {
+            // Parse the response to extract the CSS selector
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(response.getBody());
+            if (root.isArray() && root.size() > 0) {
+                String generatedText = root.get(0).get("generated_text").asText();
+                // Extract the CSS selector from the generated text
+                return generatedText.trim();
+            }
+        } else {
+            // Handle error responses
+            throw new RuntimeException("Failed to get response from Hugging Face API: " + response.getStatus() + " - " + response.getBody());
+        }
+
+        return null;
+    }
+
+    /**
+     * Escapes special characters in JSON strings.
+     *
+     * @param text The input text to escape.
+     * @return The escaped text.
+     */
+    private String escapeJson(String text) {
+        return text.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+}

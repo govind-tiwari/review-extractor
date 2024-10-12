@@ -1,0 +1,29 @@
+
+package com.example.review_extractor.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.review_extractor.model.ReviewResponse;
+import com.example.review_extractor.service.ReviewService;
+
+@RestController
+@RequestMapping("/api")
+public class ReviewController {
+
+    @Autowired
+    private ReviewService reviewService;
+
+    @GetMapping("/reviews")
+    public ReviewResponse getReviews(@RequestParam("page") String url) {
+        try {
+            return reviewService.extractReviews(url);
+        } catch (Exception e) {
+            // Handle exceptions and return appropriate HTTP responses
+            throw new RuntimeException("Error extracting reviews: " + e.getMessage());
+        }
+    }
+}

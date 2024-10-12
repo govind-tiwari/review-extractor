@@ -1,0 +1,102 @@
+package com.example.review_extractor.service;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
+
+@Service
+public class OpenAIService {
+
+    @Value("${openai.api.key}")
+    private String openAIApiKey;
+
+    private static final String OPENAI_API_URL = "https://api.openai.com/v1/completions";
+
+    public String getReviewCssSelector(String url, String pageSource) throws UnirestException {
+        String prompt = String.format(
+                "Analyze the following HTML content of a product page: [URL: %s]. Identify the CSS selector that can be used to select all review elements on this page.\n\nHTML Content:\n%s\n\nProvide only the CSS selector without any additional explanation.",
+                url, pageSource
+        );
+
+        String requestBody = "{\n" +
+                "  \"model\": \"text-davinci-003\",\n" +
+                "  \"prompt\": \"" + escapeJson(prompt) + "\",\n" +
+                "  \"max_tokens\": 100,\n" +
+                "  \"temperature\": 0.2\n" +
+                "}";
+
+        HttpResponse<String> response = Unirest.post("https://api.openai.com/v1/completions")
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + openAIApiKey)
+                .body(requestBody)
+                .asString();
+
+        if (response.getStatus() == 200) {
+            // Parse the response to extract the CSS selector
+            // This is a simplified parser; in production, use a proper JSON parser
+            String responseBody = response.getBody();
+            // Extract text between "text": " and the closing "
+            int index = responseBody.indexOf("\"text\": \"");
+            if (index != -1) {
+                int start = index + 9;
+                int end = responseBody.indexOf("\"", start);
+                if (end != -1) {
+                    String cssSelector = responseBody.substring(start, end).trim();
+                    return cssSelector;
+                }
+            }
+        } else {
+            // Handle error responses
+            throw new RuntimeException("Failed to get response from OpenAI API: " + response.getStatus());
+        }
+
+        return null;
+    }
+
+    private String escapeJson(String text) {
+        return text.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+    
+    public String getNextPageCssSelector(String url, String pageSource) throws UnirestException {
+        String prompt = String.format(
+                "Analyze the following HTML content of a product page: [URL: %s]. Identify the CSS selector for the 'Next' button or link that navigates to the next page of reviews.\n\nHTML Content:\n%s\n\nProvide only the CSS selector without any additional explanation.",
+                url, pageSource
+        );
+
+        String requestBody = "{\n" +
+                "  \"model\": \"text-davinci-003\",\n" +
+                "  \"prompt\": \"" + escapeJson(prompt) + "\",\n" +
+                "  \"max_tokens\": 100,\n" +
+                "  \"temperature\": 0.2\n" +
+                "}";
+
+        HttpResponse<String> response = Unirest.post("https://api.openai.com/v1/completions")
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + openAIApiKey)
+                .body(requestBody)
+                .asString();
+
+        if (response.getStatus() == 200) {
+            // Parse the response to extract the CSS selector
+            String responseBody = response.getBody();
+            int index = responseBody.indexOf("\"text\": \"");
+            if (index != -1) {
+                int start = index + 9;
+                int end = responseBody.indexOf("\"", start);
+                if (end != -1) {
+                    String cssSelector = responseBody.substring(start, end).trim();
+                    return cssSelector;
+                }
+            }
+        } else {
+            // Handle error responses
+            throw new RuntimeException("Failed to get response from OpenAI API: " + response.getStatus());
+        }
+
+        return null;
+    }
+
+}

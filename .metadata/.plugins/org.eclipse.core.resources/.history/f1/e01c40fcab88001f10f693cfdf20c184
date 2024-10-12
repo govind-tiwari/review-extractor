@@ -1,0 +1,94 @@
+package com.example.review_extractor.service;
+
+import com.example.review_extractor.model.Review;
+import com.example.review_extractor.model.ReviewResponse;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class ReviewService {
+
+    private final OpenAIService openAIService;
+
+    public ReviewService(OpenAIService openAIService) {
+        this.openAIService = openAIService;
+    }
+
+    public ReviewResponse extractReviews(String url) throws Exception {
+        // Initialize Selenium WebDriver
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless=new"); // Use headless mode
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
+
+        WebDriver driver = new ChromeDriver(options);
+
+        try {
+            driver.get(url);
+            Thread.sleep(3000); // Wait for the page to load
+
+            // Use OpenAI to identify CSS selectors for reviews
+            String pageSource = driver.getPageSource();
+            String cssSelector = openAIService.getReviewCssSelector(url, pageSource);
+
+            if (cssSelector == null || cssSelector.isEmpty()) {
+                throw new Exception("Unable to identify review CSS selector.");
+            }
+
+            List<WebElement> reviewElements = driver.findElements(By.cssSelector(cssSelector));
+            List<Review> reviews = new ArrayList<>();
+
+            for (WebElement element : reviewElements) {
+                // Extract review details based on assumed structure
+                String title = "";
+                String body = "";
+                int rating = 0;
+                String reviewer = "";
+
+                try {
+                    // These selectors might need to be adjusted based on the identified structure
+                    title = element.findElement(By.cssSelector(".review-title")).getText();
+                } catch (Exception e) {
+                    // Handle missing title
+                }
+
+                try {
+                    body = element.findElement(By.cssSelector(".review-body")).getText();
+                } catch (Exception e) {
+                    // Handle missing body
+                }
+
+                try {
+                    String ratingStr = element.findElement(By.cssSelector(".review-rating")).getText();
+                    rating = Integer.parseInt(ratingStr.trim());
+                } catch (Exception e) {
+                    // Handle missing or malformed rating
+                }
+
+                try {
+                    reviewer = element.findElement(By.cssSelector(".reviewer-name")).getText();
+                } catch (Exception e) {
+                    // Handle missing reviewer name
+                }
+
+                Review review = new Review(title, body, rating, reviewer);
+                reviews.add(review);
+            }
+
+            // Handle pagination to get all reviews
+            int totalReviews = reviews.size();
+            // Implement pagination logic here (see next section)
+
+            return new ReviewResponse(totalReviews, reviews);
+        } finally {
+            driver.quit();
+        }
+    }
+}

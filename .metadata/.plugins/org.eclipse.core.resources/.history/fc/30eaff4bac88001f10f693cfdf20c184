@@ -1,0 +1,5 @@
+package com.example.review_extractor.controller;
+
+public class ReviewController {
+
+}

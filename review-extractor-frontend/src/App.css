@@ -1,0 +1,60 @@
+/* src/App.css */
+
+.App {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding: 20px;
+}
+
+form {
+  margin-bottom: 20px;
+}
+
+input[type="url"] {
+  width: 60%;
+  padding: 10px;
+  font-size: 16px;
+  margin-right: 10px;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.error {
+  color: red;
+  margin-top: 10px;
+}
+
+.reviews-section {
+  text-align: left;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.reviews-section ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.review {
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+}
+
+.review h3 {
+  margin-top: 0;
+}
+
+.review p {
+  margin: 5px 0;
+}
